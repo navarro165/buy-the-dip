@@ -1,4 +1,4 @@
-blessings==1.7
+blessed==1.17.12
 cbpro==1.1.4
 certifi==2020.12.5
 chardet==4.0.0
@@ -19,4 +19,5 @@ six==1.10.0
 sortedcontainers==2.3.0
 statsmodels==0.12.2
 urllib3==1.26.3
+wcwidth==0.2.5
 websocket-client==0.40.0
