@@ -34,6 +34,7 @@ class Lowess:
                 groups[index]['y'].append(y)
 
         for trend in groups:
-            trend["change"] = round(100*(1 - (min(trend['y'])/max(trend['y']))), 2)
+            per_change = round(100*(1 - (min(trend['y'])/max(trend['y']))), 2)
+            trend["change"] = per_change
 
         return groups
