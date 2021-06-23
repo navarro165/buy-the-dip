@@ -6,6 +6,7 @@ import click
 from blessed import Terminal
 
 import components as cp
+import client as cl
 
 
 term = Terminal()
@@ -14,9 +15,18 @@ term = Terminal()
 @click.command()
 @click.option('--currency',
               prompt='Enter a crypto',
-              help='"BTC-USD", "ETH-USD", etc')
-def run(currency="btc-usd", ):
+              help='"BTC", "ETH", etc')
+@click.option('--buy_the_dip',
+              prompt='***COINBASE PRO CONFIG REQUIRED*** -- buy the dip (y/n)?',
+              help='"Coinbase Pro account config setup needed')
+def run(currency, buy_the_dip):
     currency = currency.strip().upper()
+
+    if buy_the_dip:
+        auth_client = cl.Coinbase(currency)
+
+    currency += '-USD'
+
     with cp.Trends(currency) as trends:
         width, height = trends.join()
 
