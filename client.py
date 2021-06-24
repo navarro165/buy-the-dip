@@ -42,9 +42,33 @@ class Coinbase:
         }
         return current_account
 
+    @property
+    def usd_balance(self):
+        return round(float(self.current_account['usd']['balance']), 2)
+
+    @property
+    def is_coin_enabled(self):
+        return self.current_account['trading_enabled']
+
+    def buy(self, funds=5):
+        has_valid_funds_size = self.is_coin_enabled \
+                               and self.usd_balance > funds > 5
+
+        if not has_valid_funds_size:
+            return "Verify Coin is enabled for trading, purchase above $5, " \
+                   "and enough balance is available to trade."
+
+        response = self.auth_client.place_market_order(
+            product_id=f'{self.coin}-USD',
+            side='buy',
+            funds=funds
+        )
+        if 'message' in response:
+            return response['message']
+
 
 if __name__ == '__main__':
-    import pprint
-
     client = Coinbase('BTC')
-    pprint.pprint(client.current_account)
+    print(client.usd_balance)
+    print(client.buy())
+    print(client.usd_balance)
