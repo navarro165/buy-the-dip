@@ -1,5 +1,5 @@
 # buy-the-dip
-###Dollar Cost Average Crypto Trading Bot
+Dollar Cost Average Crypto Trading Bot
 &nbsp;
 
 ***Currently only supports Coinbase Pro***
@@ -15,6 +15,6 @@ PASSPHRASE = your-passphrase
 ```
 &nbsp;
 
-####In order to run locally:
+In order to run locally:
 - install requirements into a new venv
 - source activate venv
