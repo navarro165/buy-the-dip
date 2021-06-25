@@ -1,6 +1,9 @@
 # buy-the-dip
-Dollar Cost Average Crypto Trading Bot
+### Dollar Cost Average Crypto Trading Bot
 &nbsp;
+![Screenshot from 2021-06-25 00-11-29](https://user-images.githubusercontent.com/43856967/123373877-cdfb6400-d54b-11eb-9cf0-2495def2cabe.png)
+&nbsp;
+
 
 ***Currently only supports Coinbase Pro***
 
