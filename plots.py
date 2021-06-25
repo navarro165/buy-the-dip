@@ -8,8 +8,8 @@ class Plotter:
     def plot(cls, **kwargs):
         if kwargs.get("_type") == "terminal":
             del kwargs["_type"]
-            width, height = cls.plot_terminal(**kwargs)
-            return width, height
+            width, height, last_sign, last_change = cls.plot_terminal(**kwargs)
+            return width, height, last_sign, last_change
         elif kwargs.get("_type") == "web":
             del kwargs["_type"]
             cls.plot_plotly(**kwargs)
@@ -35,10 +35,15 @@ class Plotter:
         plt.clt()
         plt.plot(x, y, label=title, line_color="artic")
 
+        last_sign, last_change = None, None
+
         if trendlines:
             for i, tl in enumerate(trendlines, start=1):
                 sign = '+' if tl["slope"] > 0 else '-'
                 plt.plot(tl['x'], tl['y'], label=f'({sign} {tl["change"]}%) trend {i}')
+
+                last_sign = sign
+                last_change = tl["change"]
 
         if any([title, xaxis_title, yaxis_title]):
             plt.title(title)
@@ -53,4 +58,4 @@ class Plotter:
         plt.axes_color("black")
         plt.ticks_color("white")
         plt.show()
-        return width, height
+        return width, height, last_sign, last_change

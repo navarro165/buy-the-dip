@@ -3,13 +3,9 @@ import time
 import threading
 
 import click
-from blessed import Terminal
 
+import utils as ut
 import components as cp
-import client as cl
-
-
-term = Terminal()
 
 
 @click.command()
@@ -20,22 +16,36 @@ term = Terminal()
               prompt='***COINBASE PRO CONFIG REQUIRED*** -- buy the dip (y/n)?',
               help='"Coinbase Pro account config setup needed')
 def run(currency, buy_the_dip):
-    currency = currency.strip().upper()
+
+    if buy_the_dip in ['y', 'Y']:
+        buy_the_dip = True
+    elif buy_the_dip in ['n', 'N']:
+        buy_the_dip = False
+    else:
+        raise ValueError('Param "buy_the_dip" can be either "n" or "y')
+
+    currency = currency.strip().upper() + '-USD'
+    buy_obj = type('buy_obj', (object,), {'frequency': None, 'amount': None})
 
     if buy_the_dip:
-        auth_client = cl.Coinbase(currency)
+        frequency = float(input('\nHow often do you want to buy (in minutes)? '))
+        amount = float(input('Enter recurring purchase amount (min=$5): '))
 
-    currency += '-USD'
+        if frequency < 1 or amount < 5:
+            raise ValueError("Please select valid purchase frequency and amount")
 
-    with cp.Trends(currency) as trends:
+        buy_obj.amount = amount
+        buy_obj.frequency = frequency
+
+    with cp.Trends(currency, buy_the_dip=buy_the_dip, buy_obj=buy_obj) as trends:
         width, height = trends.join()
 
     event = threading.Event()
     event.set()
-    with cp.Trends(currency, frequency=60, event=event) as trends:
+    with cp.Trends(currency, event=event, buy_the_dip=buy_the_dip, buy_obj=buy_obj) as trends:
         with cp.CurrentPrice(currency, event,
                              term_x_pos=0,
-                             term_y_pos=1+height) as cur_price:
+                             term_y_pos=height) as cur_price:
             try:
                 while True:
                     time.sleep(.1)
@@ -46,7 +56,7 @@ def run(currency, buy_the_dip):
 
 
 if __name__ == '__main__':
-    with term.fullscreen():
+    with ut.term.fullscreen():
         try:
             run()
         except KeyboardInterrupt:

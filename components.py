@@ -7,10 +7,9 @@ import cbpro
 import pandas as pd
 
 import plots as pl
+import utils as ut
+import client as cl
 import data_tools as dt
-
-from blessed import Terminal
-term = Terminal()
 
 
 class MyWebsocketClient(cbpro.WebsocketClient):
@@ -32,14 +31,19 @@ class MyWebsocketClient(cbpro.WebsocketClient):
 
 class Trends:
     def __init__(self, currency, public_client=None,
-                 frequency=None, event=None):
+                 frequency=60, event=None, buy_the_dip=False, buy_obj=None):
         self.thread = None
         self.event = event
         self.frequency = frequency  # in secs
         self.was_joined = False
         self.currency = currency
+        self.buy_the_dip = buy_the_dip
+        self.buy_obj = buy_obj
         self.out_queue = queue.Queue()
         self.public_client = public_client
+
+        if self.buy_obj.frequency:
+            self.frequency = int(self.frequency *buy_obj.frequency)
 
     def __enter__(self):
         thread_args = {
@@ -61,15 +65,14 @@ class Trends:
         return self.out_queue.get()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        print(term.home + term.clear)
+        print(ut.term.home + ut.term.clear)
         if not self.was_joined:
             try:
                 self.thread.join()
             except Exception as e:
                 raise RuntimeError(f"Current trends process failed. Message: {e}")
 
-    @classmethod
-    def get_trends(cls, currency, out_queue=None, frequency=None, event=None):
+    def get_trends(self, currency, out_queue=None, frequency=None, event=None):
         def _get_trends():
             response = requests.request(
                 "GET",
@@ -101,7 +104,7 @@ class Trends:
                 y=closing_price
             )
             lowess_trendlines = dt.Lowess.get_lowess_trendlines(lowess_df)
-            width, height = pl.Plotter.plot(
+            width, height, last_sign, last_change = pl.Plotter.plot(
                 x=minute_mark,
                 y=closing_price,
                 trendlines=lowess_trendlines,
@@ -113,14 +116,42 @@ class Trends:
             if out_queue:
                 out_queue.put((width, height))
 
-        _get_trends()
+            return width, height, last_sign, last_change
+
+        _, height, last_sign, last_change = _get_trends()
+        if self.buy_the_dip:
+            ut.Messages.next_purchase(height, self.frequency)
+
         if frequency and event:
+            counter = 0
+            mins_elapsed = 0
             initial_time = time.time()
+
+            client = cl.Coinbase(self.currency.replace('-USD', ""))
+            available_balance = client.usd_balance
+
             while event.is_set():
                 if time.time() - initial_time > frequency:
                     _get_trends()
+
+                    if self.buy_the_dip and mins_elapsed % self.buy_obj.frequency == 0:
+                        counter = 0
+                        if last_sign == '-':
+                            response = client.buy(self.buy_obj.amount)
+                            available_balance = client.usd_balance
+                            ut.Messages.buy(height, response)
+                        else:
+                            ut.Messages.not_dipping(height)
+
                     initial_time = time.time()
-                time.sleep(.1)
+                    mins_elapsed += 1
+
+                time.sleep(1)
+                counter += 1
+
+                if self.buy_the_dip:
+                    ut.Messages.next_purchase(height, self.frequency - counter)
+                    ut.Messages.available_balance(height, available_balance)
 
 
 class CurrentPrice:
@@ -153,7 +184,7 @@ class CurrentPrice:
         if not self.was_joined:
             try:
                 self.thread.join()
-                print(term.home + term.clear)
+                print(ut.term.home + ut.term.clear)
             except Exception as e:
                 raise RuntimeError(f"Current trends process failed. Message: {e}")
 
@@ -164,15 +195,14 @@ class CurrentPrice:
                     if ws_client.error:
                         print("socket error")  # TODO: add logs
                         break
+
                     if ws_client.message:
-                        print(
-                            term.move_xy(self.term_x_pos, self.term_y_pos) +
-                            f'>>> Current {currency} price: '
-                            f'${float(ws_client.message["price"]):,}\r',
-                            end=""
-                        )
+                        price = f'{float(ws_client.message["price"]):,}'
+                        ut.Messages.current_price(self.term_y_pos, currency, price)
+
                     time.sleep(1)
                 ws_client.close()
+
             except Exception as e:
                 raise RuntimeError(e)
             finally:
